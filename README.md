@@ -17,7 +17,7 @@ Application makes it easier to read and understand the Koran. Key features inclu
 ## Generates Keystore
 
 ```
-keytool -genkeypair -v -keystore resep-masakan-key.keystore -keyalg RSA -keysize 2048 -validity 10000 -storepass 220898 -keypass 220898 -alias resep-masakan
+keytool -genkeypair -v -keystore quran-key.keystore -keyalg RSA -keysize 2048 -validity 10000 -storepass 220898 -keypass 220898 -alias quran
 ```
 
 ## Changing Package Name
