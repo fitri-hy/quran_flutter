@@ -12,7 +12,7 @@ Future<List<Surat>> fetchSurat() async {
     var data = json.decode(response.body) as List;
     return data.map((json) => Surat.fromJson(json)).toList();
   } else {
-    throw Exception('Failed to load Surat');
+    throw Exception('Terjadi Kesalahan Coba Lagi!');
   }
 }
 
@@ -104,30 +104,40 @@ class _SuratListState extends State<SuratList> {
     super.dispose();
   }
   
+  Future<void> _refreshSuratList() async {
+    setState(() {
+      suratList = fetchSurat();
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-	appBar: AppBar(
-	  backgroundColor: Colors.blue,
-	  iconTheme: IconThemeData(color: Colors.white),
-	  actions: [
-		IconButton(
-		  icon: Icon(Icons.search),
-		  onPressed: () {
-			setState(() {
-			  _isSearchVisible = !_isSearchVisible;
-			});
-		  },
-		),
-	  ],
-	  title: Row(
-		children: [
-		  Image.asset('assets/logo.png', height: 36.0),
-		  SizedBox(width: 8.0),
-		  Text('Al-Qur\'an', style: TextStyle(color: Colors.white)),
-		],
-	  ),
-	),
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _refreshSuratList,
+          ),
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              setState(() {
+                _isSearchVisible = !_isSearchVisible;
+              });
+            },
+          ),
+        ],
+        title: Row(
+          children: [
+            Image.asset('assets/logo.png', height: 36.0),
+            SizedBox(width: 8.0),
+            Text('Al-Qur\'an', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
 
       body: Column(
         children: [
@@ -162,99 +172,102 @@ class _SuratListState extends State<SuratList> {
               ),
             ),
           Expanded(
-            child: FutureBuilder<List<Surat>>(
-              future: suratList,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
-                } else if (snapshot.hasData) {
-                  var suratList = snapshot.data!;
-                  return ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    itemCount: suratList.length,
-                    itemBuilder: (context, index) {
-                      var surat = suratList[index];
-                      return Card(
-                        margin: EdgeInsets.symmetric(vertical: 8.0),
-                        elevation: 3.0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                        color: Colors.white,
-                        child: ListTile(
-                          contentPadding: EdgeInsets.all(16.0),
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.blue,
-                            child: Text('${surat.nomor}', style: TextStyle(color: Colors.white)),
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text('${surat.namaLatin} (${surat.nama})', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                              ),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue,
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.book, size: 16.0, color: Colors.white),
-                                    SizedBox(width: 4.0),
-                                    Text('${surat.jumlahAyat}', style: TextStyle(color: Colors.white, fontSize: 12.0)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Padding(
-                            padding: EdgeInsets.only(top: 8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+            child: RefreshIndicator(
+              onRefresh: _refreshSuratList,
+              child: FutureBuilder<List<Surat>>(
+                future: suratList,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('${snapshot.error}', style: TextStyle(color: Colors.red)));
+                  } else if (snapshot.hasData) {
+                    var suratList = snapshot.data!;
+                    return ListView.builder(
+                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      itemCount: suratList.length,
+                      itemBuilder: (context, index) {
+                        var surat = suratList[index];
+                        return Card(
+                          margin: EdgeInsets.symmetric(vertical: 8.0),
+                          elevation: 3.0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+                          color: Colors.white,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.all(16.0),
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.blue,
+                              child: Text('${surat.nomor}', style: TextStyle(color: Colors.white)),
+                            ),
+                            title: Row(
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.location_on, size: 18.0, color: Colors.blue),
-                                    SizedBox(width: 10.0),
-                                    Expanded(
-                                      child: Text('${surat.tempatTurun}', style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ],
+                                Expanded(
+                                  child: Text('${surat.namaLatin} (${surat.nama})', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
                                 ),
-                                SizedBox(height: 6.0),
-                                Row(
-                                  children: [
-                                    Icon(Icons.g_translate, size: 18.0, color: Colors.blue),
-                                    SizedBox(width: 10.0),
-                                    Expanded(
-                                      child: Text('${surat.arti}', style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ],
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.book, size: 16.0, color: Colors.white),
+                                      SizedBox(width: 4.0),
+                                      Text('${surat.jumlahAyat}', style: TextStyle(color: Colors.white, fontSize: 12.0)),
+                                    ],
+                                  ),
                                 ),
-                                SizedBox(height: 4.0),
                               ],
                             ),
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SuratDetail(nomor: surat.nomor),
+                            subtitle: Padding(
+                              padding: EdgeInsets.only(top: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.location_on, size: 18.0, color: Colors.blue),
+                                      SizedBox(width: 10.0),
+                                      Expanded(
+                                        child: Text('${surat.tempatTurun}', style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 6.0),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.g_translate, size: 18.0, color: Colors.blue),
+                                      SizedBox(width: 10.0),
+                                      Expanded(
+                                        child: Text('${surat.arti}', style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 4.0),
+                                ],
                               ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  );
-                } else {
-                  return Center(child: Text('Tidak ada data', style: TextStyle(color: Colors.black)));
-                }
-              },
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SuratDetail(nomor: surat.nomor),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  } else {
+                    return Center(child: Text('Tidak ada data', style: TextStyle(color: Colors.black)));
+                  }
+                },
+              ),
             ),
           ),
-			if (_bannerAd != null)
+          if (_bannerAd != null)
             Container(
               height: _bannerAd.size.height.toDouble(),
               child: AdWidget(ad: _bannerAd),

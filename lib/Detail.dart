@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:just_audio/just_audio.dart';
 import 'AdMobConfig.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -44,12 +45,16 @@ class Ayat {
   final String teksArab;
   final String teksLatin;
   final String teksIndonesia;
-
+  final String audio;
+  bool isPlaying;
+  
   Ayat({
     required this.nomorAyat,
     required this.teksArab,
     required this.teksLatin,
     required this.teksIndonesia,
+    required this.audio,
+	this.isPlaying = false,
   });
 
   factory Ayat.fromJson(Map<String, dynamic> json) {
@@ -58,6 +63,8 @@ class Ayat {
       teksArab: json['teksArab'],
       teksLatin: json['teksLatin'],
       teksIndonesia: json['teksIndonesia'],
+      audio: json['audio']['01'],
+	  isPlaying: false,
     );
   }
 }
@@ -75,6 +82,8 @@ class _SuratDetailState extends State<SuratDetail> {
   Future<Surat>? suratDetail;
   int currentAyatCount = 10;
   late BannerAd _bannerAd;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool isPlaying = false;
 
   @override
   void initState() {
@@ -98,6 +107,7 @@ class _SuratDetailState extends State<SuratDetail> {
 
   @override
   void dispose() {
+    _audioPlayer.dispose();
     _bannerAd.dispose();
     super.dispose();
   }
@@ -111,6 +121,18 @@ class _SuratDetailState extends State<SuratDetail> {
     } else {
       throw Exception('Failed to load Surat Detail');
     }
+  }
+
+  Future<void> _playPauseAudio(String url) async {
+    if (isPlaying) {
+      await _audioPlayer.pause();
+    } else {
+      await _audioPlayer.setUrl(url);
+      await _audioPlayer.play();
+    }
+    setState(() {
+      isPlaying = !isPlaying;
+    });
   }
 
   @override
@@ -184,101 +206,139 @@ class _SuratDetailState extends State<SuratDetail> {
                       ),
                       SizedBox(height: 10.0),
                       Text(deskripsiText, style: TextStyle(fontSize: 16.0, color: Colors.black87)),
-						  if (_bannerAd != null)
-						  Container(
-							margin: EdgeInsets.symmetric(vertical: 16.0),
-							height: _bannerAd.size.height.toDouble(),
-							child: AdWidget(ad: _bannerAd),
-						  ),
-					  SizedBox(height: 20.0),
-                      // Ayat list
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: surat.ayat.length < currentAyatCount ? surat.ayat.length : currentAyatCount,
-                        itemBuilder: (context, index) {
-                          var ayat = surat.ayat[index];
-                          return InkWell(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    backgroundColor: Colors.white,
-                                    title: Text('Artinya (${ayat.nomorAyat})', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    content: SingleChildScrollView(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          SizedBox(height: 10.0),
-                                          Text('${ayat.teksIndonesia}', style: TextStyle(fontSize: 16.0)),
-                                        ],
-                                      ),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                        },
-                                        child: Text('Tutup', style: TextStyle(color: Colors.blue)),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                            child: Card(
-                              margin: EdgeInsets.symmetric(vertical: 8.0),
-                              elevation: 3.0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-                              color: Colors.white,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Container(
-                                      padding: EdgeInsets.all(10.0),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        '${ayat.nomorAyat}',
-                                        style: TextStyle(
-                                          fontSize: 22.0,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  ListTile(
-                                    title: Text(
-                                      '${ayat.teksArab}',
-                                      style: TextStyle(fontSize: 22.0, fontWeight: FontWeight.bold, color: Colors.blue),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(height: 15.0),
-                                        Text(
-                                          ayat.teksLatin,
-                                          style: TextStyle(fontSize: 16.0, color: Colors.black87),
-                                        ),
-                                        SizedBox(height: 15.0),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                      if (_bannerAd != null)
+                        Container(
+                          margin: EdgeInsets.symmetric(vertical: 16.0),
+                          height: _bannerAd.size.height.toDouble(),
+                          child: AdWidget(ad: _bannerAd),
+                        ),
+                      SizedBox(height: 20.0),
+						ListView.builder(
+						  shrinkWrap: true,
+						  physics: NeverScrollableScrollPhysics(),
+						  itemCount: surat.ayat.length < currentAyatCount ? surat.ayat.length : currentAyatCount,
+						  itemBuilder: (context, index) {
+							var ayat = surat.ayat[index];
+							bool isPlaying = ayat.isPlaying;
 
+							return InkWell(
+							  onTap: () {
+								showDialog(
+								  context: context,
+								  builder: (BuildContext context) {
+									return AlertDialog(
+									  backgroundColor: Colors.white,
+									  title: Text('Artinya (${ayat.nomorAyat})'),
+									  content: Column(
+										mainAxisSize: MainAxisSize.min,
+										children: [
+										  Text('${ayat.teksIndonesia}'),
+										],
+									  ),
+									  actions: [
+										TextButton(
+										  onPressed: () {
+											Navigator.pop(context);
+										  },
+										  child: Text('Tutup', style: TextStyle(color: Colors.blue)),
+										),
+									  ],
+									);
+								  },
+								);
+							  },
+							  child: Card(
+								margin: EdgeInsets.symmetric(vertical: 8.0),
+								elevation: 3.0,
+								shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+								color: Colors.white,
+								child: Column(
+								  crossAxisAlignment: CrossAxisAlignment.start,
+								  children: [
+									Padding(
+									  padding: const EdgeInsets.all(16.0),
+									  child: Row(
+										mainAxisAlignment: MainAxisAlignment.spaceBetween,
+										children: [
+										  Container(
+											padding: EdgeInsets.all(10.0),
+											decoration: BoxDecoration(
+											  color: Colors.blue,
+											  shape: BoxShape.circle,
+											),
+											child: Text(
+											  '${ayat.nomorAyat}',
+											  style: TextStyle(
+												fontSize: 22.0,
+												fontWeight: FontWeight.bold,
+												color: Colors.white,
+											  ),
+											),
+										  ),
+											ElevatedButton.icon(
+											  onPressed: () {
+												setState(() {
+												  ayat.isPlaying = !ayat.isPlaying;
+												  if (ayat.isPlaying) {
+													_audioPlayer.setUrl(ayat.audio);
+													_audioPlayer.play();
+													_audioPlayer.processingStateStream.listen((state) {
+													  if (state == ProcessingState.completed) {
+														setState(() {
+														  ayat.isPlaying = false;
+														});
+													  }
+													});
+												  } else {
+													_audioPlayer.pause();
+												  }
+												});
+											  },
+											  icon: Icon(
+												ayat.isPlaying ? Icons.stop : Icons.volume_up,
+												color: Colors.blue,
+												size: 30,
+											  ),
+											  label: Text('', style: TextStyle(color: Colors.white, fontSize: 12.0)),
+											  style: ElevatedButton.styleFrom(
+												backgroundColor: Colors.transparent,
+												shape: RoundedRectangleBorder(
+												  borderRadius: BorderRadius.circular(30),
+												),
+												padding: EdgeInsets.symmetric(horizontal: 0.0, vertical: 0.0),
+												elevation: 0,
+												shadowColor: Colors.transparent,
+												overlayColor: Colors.transparent,
+											  ),
+											),
+										],
+									  ),
+									),
+									SizedBox(height: 10.0),
+									ListTile(
+									  title: Text(
+										'${ayat.teksArab}',
+										style: TextStyle(fontSize: 22.0, fontWeight: FontWeight.bold, color: Colors.black87),
+										textAlign: TextAlign.right,
+									  ),
+									  subtitle: Column(
+										crossAxisAlignment: CrossAxisAlignment.start,
+										children: [
+										  SizedBox(height: 15.0),
+										  Text(
+											ayat.teksLatin,
+											style: TextStyle(fontSize: 16.0, color: Colors.black87),
+										  ),
+										  SizedBox(height: 15.0),
+										],
+									  ),
+									),
+								  ],
+								),
+							  ),
+							);
+						  },
+						),
                       if (surat.ayat.length > currentAyatCount)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -303,7 +363,7 @@ class _SuratDetailState extends State<SuratDetail> {
                 ),
               );
             } else {
-              return Center(child: Text('Tidak ada data', style: TextStyle(color: Colors.black87, fontSize: 16.0)));
+              return Center(child: Text('Tidak ada data', style: TextStyle(color: Colors.black87)));
             }
           },
         ),
